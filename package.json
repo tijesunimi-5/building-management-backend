@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "server": "node dist/server.js",
+    "db:init": "ts-node -e \"import { initDb } from './src/db/init'; initDb().then(() => process.exit(0));\"",
     "seed": "ts-node src/db/seed.ts"
   },
   "keywords": [

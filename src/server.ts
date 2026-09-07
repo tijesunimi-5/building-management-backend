@@ -12,8 +12,10 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Initialize Database Tables and Seed Data on Startup
-initDb().catch((err) => console.error('Failed to initialize database:', err));
+// Optional DB Init (Only runs if AUTO_INIT_DB=true is explicitly set in env)
+if (process.env.AUTO_INIT_DB === 'true') {
+  initDb().catch((err) => console.error('Failed to initialize database:', err));
+}
 
 // Health Check Endpoint
 app.get('/api/v1/health', async (_req: Request, res: Response) => {
