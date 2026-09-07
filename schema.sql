@@ -12,11 +12,14 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(50) NOT NULL DEFAULT 'CLIENT',
     role_title VARCHAR(100),
     avatar_url TEXT,
+    password VARCHAR(255),
     status VARCHAR(50) DEFAULT 'Available',
     active_job_id VARCHAR(64),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255);
 
 -- 2. Create Properties Table
 CREATE TABLE IF NOT EXISTS properties (
