@@ -1,0 +1,171 @@
+// Prisma schema for ApexCare Property Services SaaS Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENT
+  ADMIN
+  WORKER
+}
+
+enum PropertyType {
+  SINGLE_FAMILY
+  TOWNHOUSE
+  CONDO
+  MULTI_FAMILY
+  COMMERCIAL
+}
+
+enum RequestStatus {
+  AWAITING_REVIEW
+  UNDER_REVIEW
+  APPROVED
+  DECLINED
+  CANCELLED
+}
+
+enum ProjectStatus {
+  SCHEDULED
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum PhotoCategory {
+  BEFORE
+  DURING
+  AFTER
+}
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  name          String
+  phone         String?
+  role          Role            @default(CLIENT)
+  avatarUrl     String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  properties    Property[]      @relation("ClientProperties")
+  assignedJobs  Project[]       @relation("WorkerProjects")
+  createdReqs   ServiceRequest[]
+  uploadedPhotos Photo[]
+}
+
+model Property {
+  id            String          @id @default(uuid())
+  name          String          // e.g. "Thompson Residence"
+  address       String          // e.g. "142 Yorkville Ave"
+  city          String          @default("Toronto")
+  province      String          @default("ON")
+  postalCode    String          @default("M5R 1C2")
+  propertyType  PropertyType    @default(SINGLE_FAMILY)
+  unitNumber    String?
+  notes         String?
+  clientId      String
+  client        User            @relation("ClientProperties", fields: [clientId], references: [id])
+
+  requests      ServiceRequest[]
+  projects      Project[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model ServiceRequest {
+  id              String        @id @default(uuid())
+  referenceNumber String        @unique // e.g. REQ-2026-8941
+  clientId        String
+  client          User          @relation(fields: [clientId], references: [id])
+  propertyId      String
+  property        Property      @relation(fields: [propertyId], references: [id])
+  serviceCategory String        // Plumbing, Electrical, Painting, Repairs, Maintenance, etc.
+  description     String
+  preferredDate   DateTime?
+  additionalNotes String?
+  status          RequestStatus @default(AWAITING_REVIEW)
+
+  project         Project?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Project {
+  id                String        @id @default(uuid())
+  title             String        // e.g. "Thompson Residence — Plumbing Repair"
+  serviceRequestId  String?       @unique
+  serviceRequest    ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
+  propertyId        String
+  property          Property      @relation(fields: [propertyId], references: [id])
+  workerId          String?
+  assignedWorker    User?         @relation("WorkerProjects", fields: [workerId], references: [id])
+  status            ProjectStatus @default(SCHEDULED)
+  priority          Priority      @default(MEDIUM)
+  adminObservations String?
+  expectedCompletion DateTime?
+  
+  tasks             Task[]
+  photos            Photo[]
+  timeline          TimelineEvent[]
+  notifications     Notification[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  order       Int       @default(0)
+}
+
+model Photo {
+  id          String        @id @default(uuid())
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  url         String
+  category    PhotoCategory
+  description String
+  uploadedById String
+  uploadedBy  User          @relation(fields: [uploadedById], references: [id])
+  timestamp   DateTime      @default(now())
+}
+
+model TimelineEvent {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  authorName  String
+  authorRole  String
+  timestamp   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
