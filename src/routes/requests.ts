@@ -39,6 +39,37 @@ router.post('/', async (req: Request, res: Response) => {
     const id = `req-${Date.now()}`;
     const referenceNumber = `REQ-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    // Validate foreign key constraint for property_id
+    let validPropertyId: string | null = null;
+    if (propertyId) {
+      const propCheck = await query('SELECT id FROM properties WHERE id = $1', [propertyId]);
+      if (propCheck.rows.length > 0) {
+        validPropertyId = propertyId;
+      }
+    }
+
+    // Auto-create or match property if custom propertyName was provided
+    if (!validPropertyId && propertyName) {
+      const propByName = await query('SELECT id FROM properties WHERE LOWER(name) = LOWER($1)', [propertyName.trim()]);
+      if (propByName.rows.length > 0) {
+        validPropertyId = propByName.rows[0].id;
+      } else {
+        const newPropId = `prop-${Date.now()}`;
+        await query(
+          `INSERT INTO properties (id, name, address, client_name)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (id) DO NOTHING`,
+          [
+            newPropId,
+            propertyName.trim(),
+            propertyAddress || propertyName.trim(),
+            clientName || 'Valued Client'
+          ]
+        );
+        validPropertyId = newPropId;
+      }
+    }
+
     const insertSql = `
       INSERT INTO service_requests (
         id, reference_number, property_id, property_name, property_address, 
@@ -51,7 +82,7 @@ router.post('/', async (req: Request, res: Response) => {
     const values = [
       id,
       referenceNumber,
-      propertyId || 'prop-1',
+      validPropertyId,
       propertyName || 'Thompson Residence',
       propertyAddress || '142 Yorkville Avenue, Toronto, ON',
       clientName || 'Michael Thompson',
@@ -84,6 +115,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, data: newRequest });
   } catch (error) {
+    console.error('Error in POST /service_requests:', error);
     res.status(500).json({ success: false, message: (error as Error).message });
   }
 });

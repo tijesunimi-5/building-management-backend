@@ -123,12 +123,20 @@ router.post('/triage', async (req: Request, res: Response) => {
     const formattedDate = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     const formattedTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
+    let validPropertyId: string | null = null;
+    if (targetReq.property_id) {
+      const propCheck = await query('SELECT id FROM properties WHERE id = $1', [targetReq.property_id]);
+      if (propCheck.rows.length > 0) {
+        validPropertyId = targetReq.property_id;
+      }
+    }
+
     const projValues = [
       newProjId,
       `${targetReq.property_name} — ${targetReq.service_category} Maintenance`,
       projRef,
       requestId,
-      targetReq.property_id,
+      validPropertyId,
       targetReq.property_name,
       targetReq.property_address,
       targetReq.client_name,
