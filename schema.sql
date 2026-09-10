@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS service_requests (
     service_category VARCHAR(100),
     description TEXT,
     preferred_date VARCHAR(50),
+    urgency VARCHAR(50) DEFAULT 'Medium',
     additional_notes TEXT,
     photo_urls TEXT[] DEFAULT '{}',
     status VARCHAR(50) DEFAULT 'Awaiting Review',

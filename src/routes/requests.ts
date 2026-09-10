@@ -3,6 +3,15 @@ import { query } from '../db';
 
 const router = Router();
 
+// Ensure urgency column exists in service_requests table
+(async () => {
+  try {
+    await query("ALTER TABLE service_requests ADD COLUMN IF NOT EXISTS urgency VARCHAR(50) DEFAULT 'Medium';");
+  } catch (err) {
+    // Column might already exist
+  }
+})();
+
 // Service Requests Endpoints
 router.get('/', async (_req: Request, res: Response) => {
   try {
@@ -17,6 +26,7 @@ router.get('/', async (_req: Request, res: Response) => {
       serviceCategory: row.service_category,
       description: row.description,
       preferredDate: row.preferred_date,
+      urgency: row.urgency || 'Medium',
       additionalNotes: row.additional_notes,
       photoUrls: row.photo_urls || [],
       status: row.status,
@@ -30,7 +40,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { propertyId, propertyName, propertyAddress, clientName, serviceCategory, description, preferredDate, additionalNotes, photoUrls } = req.body;
+    const { propertyId, propertyName, propertyAddress, clientName, serviceCategory, description, preferredDate, urgency, additionalNotes, photoUrls } = req.body;
     
     if (!serviceCategory || !description) {
       return res.status(400).json({ success: false, message: 'serviceCategory and description are required fields.' });
@@ -73,9 +83,9 @@ router.post('/', async (req: Request, res: Response) => {
     const insertSql = `
       INSERT INTO service_requests (
         id, reference_number, property_id, property_name, property_address, 
-        client_name, service_category, description, preferred_date, additional_notes, photo_urls, status
+        client_name, service_category, description, preferred_date, urgency, additional_notes, photo_urls, status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
 
@@ -89,6 +99,7 @@ router.post('/', async (req: Request, res: Response) => {
       serviceCategory,
       description,
       preferredDate || new Date().toISOString().split('T')[0],
+      urgency || 'Medium',
       additionalNotes || '',
       photoUrls || [],
       'Awaiting Review'
@@ -107,6 +118,7 @@ router.post('/', async (req: Request, res: Response) => {
       serviceCategory: row.service_category,
       description: row.description,
       preferredDate: row.preferred_date,
+      urgency: row.urgency || 'Medium',
       additionalNotes: row.additional_notes,
       photoUrls: row.photo_urls,
       status: row.status,
