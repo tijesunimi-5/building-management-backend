@@ -11,6 +11,7 @@ import requestsRouter from './routes/requests';
 import projectsRouter from './routes/projects';
 import workersRouter from './routes/workers';
 import uploadRouter from './routes/upload';
+import messagesRouter from './routes/messages';
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use('/api/v1/requests', requestsRouter);
 app.use('/api/v1/projects', projectsRouter);
 app.use('/api/v1/workers', workersRouter);
 app.use('/api/v1/upload', uploadRouter);
+app.use('/api/v1/messages', messagesRouter);
 
 app.listen(PORT, () => {
   console.log(`ApexCare Express REST API Server running on port ${PORT}`);
