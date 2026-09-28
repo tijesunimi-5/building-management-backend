@@ -3,7 +3,7 @@ import { query } from '../db';
 
 const router = Router();
 
-// Initialize Chat Database Schema & Seed Default Threads if empty
+// Initialize Chat Database Schema & Purge any initial seed data
 (async () => {
   try {
     await query(`
@@ -46,61 +46,25 @@ const router = Router();
       );
     `);
 
-    // Seed default threads if table is empty
-    const countRes = await query('SELECT COUNT(*) FROM chat_threads');
-    if (parseInt(countRes.rows[0].count) === 0) {
-      console.log('Seeding initial conversation threads...');
-
-      // Thread 1: Support & Dispatch
-      const thread1Id = 'thread-support-1';
-      await query(`
-        INSERT INTO chat_threads (id, title, client_id, client_name, last_message)
-        VALUES ($1, $2, $3, $4, $5)
-      `, [thread1Id, 'ApexCare General Dispatch & Support', 'user-client-1', 'Michael Thompson', 'Welcome to ApexCare Support! How can our technical team assist you today?']);
-
-      await query(`
-        INSERT INTO chat_participants (id, thread_id, user_id, user_name, user_role, role_title)
-        VALUES 
-          ('p-1-c', $1, 'user-client-1', 'Michael Thompson', 'client', 'Homeowner'),
-          ('p-1-a', $1, 'admin-1', 'ApexCare Dispatch Admin', 'admin', 'Technical Dispatch')
-        ON CONFLICT DO NOTHING
-      `, [thread1Id]);
-
-      await query(`
-        INSERT INTO chat_messages (id, thread_id, sender_id, sender_name, sender_role, content)
-        VALUES 
-          ('m-101', $1, 'admin-1', 'ApexCare Dispatch Admin', 'admin', 'Welcome to ApexCare Support! How can our technical team assist you today?'),
-          ('m-102', $1, 'user-client-1', 'Michael Thompson', 'client', 'Hello! Just wanted to confirm tomorrow maintenance appointment time.')
-      `, [thread1Id]);
-
-      // Thread 2: Project Thread (Thompson Plumbing Maintenance)
-      const thread2Id = 'thread-proj-501';
-      await query(`
-        INSERT INTO chat_threads (id, title, project_id, client_id, client_name, last_message)
-        VALUES ($1, $2, $3, $4, $5, $6)
-      `, [thread2Id, 'Thompson Residence — Plumbing Maintenance (PRJ-2026-8841)', 'proj-501', 'user-client-1', 'Michael Thompson', 'Great, thank you! The main gate code is #4829.']);
-
-      await query(`
-        INSERT INTO chat_participants (id, thread_id, user_id, user_name, user_role, role_title, avatar_url)
-        VALUES 
-          ('p-2-c', $1, 'user-client-1', 'Michael Thompson', 'client', 'Homeowner', NULL),
-          ('p-2-a', $1, 'admin-1', 'ApexCare Dispatch Admin', 'admin', 'Technical Dispatch', NULL),
-          ('p-2-w', $1, 'worker-1', 'Michael Carter', 'worker', 'Senior Plumbing Specialist', '/assets/worker_avatar_1786614986847.jpg')
-        ON CONFLICT DO NOTHING
-      `, [thread2Id]);
-
-      await query(`
-        INSERT INTO chat_messages (id, thread_id, sender_id, sender_name, sender_role, content, attachment_urls)
-        VALUES 
-          ('m-201', $1, 'admin-1', 'ApexCare Dispatch Admin', 'admin', 'Michael Carter (Senior Technician) has been assigned to your plumbing service request.', '{}'),
-          ('m-202', $1, 'worker-1', 'Michael Carter', 'worker', 'Hi Michael! I will be arriving tomorrow at 9:00 AM with replacement brass cartridge valves.', '{}'),
-          ('m-203', $1, 'user-client-1', 'Michael Thompson', 'client', 'Great, thank you! The main gate code is #4829.', '{}')
-      `, [thread2Id]);
-    }
+    // Purge legacy/dummy seed data if present
+    await query(`DELETE FROM chat_threads WHERE id IN ('thread-support-1', 'thread-proj-501');`);
   } catch (err) {
     console.error('Error initializing chat tables:', err);
   }
 })();
+
+/**
+ * DELETE /api/v1/messages/clear
+ * Clear all chat messages and threads from database
+ */
+router.delete('/clear', async (_req: Request, res: Response) => {
+  try {
+    await query('TRUNCATE chat_messages, chat_participants, chat_threads CASCADE;');
+    return res.json({ success: true, message: 'All chat threads and messages cleared successfully.' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: (error as Error).message });
+  }
+});
 
 /**
  * GET /api/v1/messages/threads
